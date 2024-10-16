@@ -1,0 +1,186 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id             String   @id @unique @default(uuid()) @db.Uuid
+  first_name     String?
+  last_name      String?
+  email          String?  @unique
+  avatar         String?
+  verified       Boolean  @default(false)
+  wins           Int      @default(0)
+  total_entries  Int      @default(0)
+  total_winnings Int      @default(0)
+  role           Role     @default(USER)
+  accepted_terms Boolean  @default(false)
+  complete       Boolean  @default(false)
+  pools          Pool[] // manager for these pools
+  entries        Entry[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+}
+
+model Team {
+  id          Int          @id @unique
+  name        String
+  short_name  String
+  avatar      String?
+  footballers Footballer[]
+  league      League?      @relation(fields: [leagueId], references: [id])
+  leagueId    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Pool {
+  id                    String     @id @unique
+  name                  String
+  avatar                String?
+  entry_fee             Int        @default(0)
+  pot                   Int        @default(0)
+  profile               Profile    @relation(fields: [profileId], references: [id]) // manager
+  profileId             String     @db.Uuid
+  commissioners_message String     @default("Have fun.")
+  entries               Entry[]
+  status                PoolStatus @default(OPEN)
+  rules                 Rules      @relation(fields: [rulesId], references: [id])
+  rulesId               String     @unique @db.Uuid
+  prize_distribution    String
+  winners               Winner[]
+  season                Int
+  league                League?    @relation(fields: [leagueId], references: [id])
+  leagueId              Int?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
+
+model Winner {
+  id        String   @id @unique @default(uuid()) @db.Uuid
+  pool      Pool     @relation(fields: [poolId], references: [id])
+  poolId    String
+  entry     Entry    @relation(fields: [entryId], references: [id])
+  entryId   String   @unique @db.Uuid
+  payout    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Rules {
+  id             String    @id @unique @default(uuid()) @db.Uuid
+  rule_set       RuleSet   @default(CLASSIC)
+  own_goals      Boolean   @default(false)
+  transfers      Boolean   @default(false)
+  transfer_fee   Int?
+  transfer_start DateTime?
+  transfer_end   DateTime?
+  transfer_open  Boolean   @default(false)
+  goal_target    Int       @default(21)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  pool           Pool?
+}
+
+model Transfer {
+  id            String      @id @unique @default(uuid()) @db.Uuid
+  entry         Entry       @relation(fields: [entryId], references: [id])
+  entryId       String      @unique @db.Uuid
+  used_transfer Boolean     @default(false)
+  paid_transfer Boolean     @default(false)
+  transfer_in   Footballer? @relation(name: "TransferIn", fields: [transferInId], references: [id])
+  transferInId  Int?
+  transfer_out  Footballer? @relation(name: "TransferOut", fields: [transferOutId], references: [id])
+  transferOutId Int?
+  goal_offset   Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Entry {
+  id             String       @id @unique @default(uuid()) @db.Uuid
+  profile        Profile      @relation(fields: [profileId], references: [id])
+  profileId      String       @db.Uuid
+  pool           Pool?        @relation(fields: [poolId], references: [id])
+  poolId         String
+  rank           Int?
+  season         Int
+  all_scored     Boolean      @default(false)
+  footballers    Footballer[]
+  paid_entry     Boolean      @default(false)
+  transfer       Transfer?
+  winner         Winner?
+  goals          Int          @default(0)
+  own_goals      Int          @default(0)
+  net_goals      Int          @default(0)
+  expected_goals Float        @default(0) 
+  status         EntryStatus  @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Footballer {
+  id          Int        @id @unique
+  avatar      String?
+  first_name  String
+  last_name   String
+  team        Team       @relation(fields: [teamId], references: [id])
+  teamId      Int
+  entries     Entry[]
+  // might need to add goals stats
+  // goals
+  // own_goals
+  // net_goals
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  transferIn  Transfer[] @relation(name: "TransferIn")
+  transferOut Transfer[] @relation(name: "TransferOut")
+  league      League?    @relation(fields: [leagueId], references: [id])
+  leagueId    Int?
+}
+
+model League {
+  id         Int          @id @unique
+  name       String
+  short_name String       @unique
+  teams      Team[]
+  pools      Pool[]
+  players    Footballer[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+enum EntryStatus {
+  ACTIVE
+  BUST
+  WINNER
+  SHORT
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PoolStatus {
+  OPEN
+  ACTIVE
+  DONE
+  CLOSED
+}
+
+enum RuleSet {
+  CLASSIC
+  CUSTOM
+}
