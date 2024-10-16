@@ -7,8 +7,8 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install production dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including devDependencies)
+RUN npm ci
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
