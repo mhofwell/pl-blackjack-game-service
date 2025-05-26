@@ -1,6 +1,9 @@
 # Use an official Node runtime as the parent image
 FROM node:18-alpine
 
+# Install OpenSSL compatibility library
+RUN apk add --no-cache openssl1.1-compat
+
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
