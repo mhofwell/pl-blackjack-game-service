@@ -163,8 +163,20 @@ async function updateEntryRankings(entries: any[]) {
 }
 
 async function runGame(): Promise<void> {
+    // get current time
+    const currentTime = new Date();
+
+    // convert to human readable time
+    const dateTime = currentTime.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
+
     try {
-        console.log('Running game for all profiles');
+        console.log(`Running game for all profiles at ${dateTime}`);
         const footballers = await prisma.footballer.findMany();
         const footballerIds = footballers.map((footballer) => footballer.id);
 
